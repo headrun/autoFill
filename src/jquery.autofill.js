@@ -1,341 +1,332 @@
 ;(function ($) {
+  "use strict";
 
-    var UP = 38,
-        DOWN = 40,
-        RIGHT = 39,
-        LEFT = 37,
-        ENTER = 13,
-        ESC = 27;
+  var UP    = 38,
+      DOWN  = 40,
+      RIGHT = 39,
+      LEFT  = 37,
+      ENTER = 13,
+      ESC   = 27;
 
-    var dropdown_html = "<ul class='dropdown-menu af-dropdown-menu'></ul>";
+  var dropdownHtml = "<ul class='dropdown-menu af-dropdown-menu'></ul>";
 
-    var get_item_html = function(value){
+  function getItemHtml (value) {
 
-        return "<li><a href='#'>" + value + "</a></li>"
+    return "<li><a href='#'>" + value + "</a></li>";
+  }
+
+  function generateAutoFill ($autoFillDD, items) {
+
+    $autoFillDD.empty();
+
+    $.each(items, function (i, item) {
+
+      $autoFillDD.append($(getItemHtml(item)));
+    });
+  }
+
+  function searchValues (term, totalData) {
+
+    var subset = [];
+
+    if (term.length === 0) {
+
+      return totalData;
+    }
+
+    var regexp = new RegExp(".*" + term + ".*", "i");
+
+    $.each(totalData, function (i, entry) {
+
+      if(regexp.test(entry)){
+
+        subset.push(entry);
+      }
+    });
+
+    return subset;
+  }
+
+  function populateAutoFill (term, totalData, $autoFillDD) {
+
+    var data = searchValues(term, totalData);
+
+    generateAutoFill($autoFillDD, data);
+  }
+
+  var autofillInstances = [];
+
+  function AutoFill ($node, options) {
+
+    $node.addClass("af-input");
+
+    var that        = this;
+    var $autoFillDD = $(dropdownHtml).insertAfter($node);
+    var data        = options.data || [];
+
+    this.el      = $node.get(0);
+    this.$el     = $node;
+    this.options = options;
+
+    this.setData = function (newData) {
+
+      data = newData;
+
+      options.data = data;
+
+      populateAutoFill($node.val(), data, $autoFillDD);
+
+      return that.$el;
     };
 
-    var generateAutoFill = function ($autoFillDD, items) {
+    this.getData = function () {
 
-        $autoFillDD.empty();
-
-        $.each(items, function (i, item) {
-
-            $autoFillDD.append($(get_item_html(item)));
-        });
+      return data;
     };
 
-    var searchValues = function (term, totalData) {
+    function addSelection () {
 
-        var subset = [];
+      var selectedText = $autoFillDD.find("li.selected").text();
 
-        if (term.length === 0) {
+      if (options.preAdd &&
+            options.preAdd.apply(that, [selectedText, $node]) === false) {
 
-            return totalData;
+        return;
+      }
+
+      $node.val(selectedText);
+      hideAutoFill();
+
+      if (options.postAdd) {
+
+        options.postAdd(selectedText, $node);
+      }
+    }
+
+    function onKeyUp (e) {
+
+      var key = e.which;
+
+      if($.inArray(key, [UP, DOWN, ENTER, ESC]) < 0){
+
+        populateAutoFill($node.val(), data, $autoFillDD);
+        showAutoFill();
+
+        return;
+      }
+
+      var $li = $autoFillDD.children("li");
+
+      if($li.length === 0){
+
+        return;
+      }
+
+      var $selectedItem = $li.filter(".selected");
+
+      if($selectedItem.length === 0){
+
+        if(key === UP){
+
+          $selectedItem = $li.eq(0);
+        }else if(key === DOWN){
+
+          $selectedItem = $li.eq($li.length - 1);
         }
+      }
 
-        var regexp = new RegExp(".*" + term + ".*", "i");
+      var selectedItemIndex = $li.index($selectedItem);
 
-        $.each(totalData, function (i, entry) {
+      switch(key){
 
-            if(regexp.test(entry)){
+        case UP:
 
-                subset.push(entry);
-            }
-        });
+          selectedItemIndex--;
+          break;
 
-        return subset;
+        case DOWN:
+
+          selectedItemIndex++;
+          break;
+
+        case ENTER:
+
+          //TODO: the following should be done when opted for strictly from the
+          //values of dropdown
+          //Do nothing when nothing is selected
+          if ($selectedItem.length === 0) {
+
+            return;
+          }
+
+          addSelection();
+
+          if($selectedItem.next().length > 0){
+
+            $selectedItem.next().addClass("selected");
+          }else {
+
+            $selectedItem.prev().addClass("selected");
+          }
+
+          $selectedItem.remove();
+
+          return;
+
+        case ESC:
+
+          hideAutoFill();
+
+          return;
+      }
+
+      if(selectedItemIndex < 0){
+
+        selectedItemIndex += $li.length;
+      }else if(selectedItemIndex >= $li.length) {
+
+         selectedItemIndex %= $li.length;
+      }
+
+      $selectedItem.removeClass("selected");
+      $li.eq(selectedItemIndex).addClass("selected");
+    }
+
+    var showAutoFill = this.showAutoFill = function () {
+
+      populateAutoFill($node.val(), data, $autoFillDD);
+      $autoFillDD.show();
     };
 
+    var hideAutoFill = this.hideAutoFill = function () {
 
-    var populateAutoFill = function (term, totalData, $autoFillDD) {
-
-        var data = searchValues(term, totalData);
-
-        generateAutoFill($autoFillDD, data);
+      $autoFillDD.hide();
     };
 
-    var autofillInstances = [];
+    function onBlur (e) {
 
-    var AutoFill = function ($node, options) {
+      var target = e.target;
 
-        var that = this;
+      if(target !== $autoFillDD.get(0) && target !== $node.get(0)){
 
-        $node.addClass("af-input");
+        hideAutoFill();
+      }
+    }
 
-        var $autoFillDD = $(dropdown_html).insertAfter($node);
+    var bindEvents = function () {
 
-        var data = options.data || [];
+      $node.on("focus", showAutoFill)
+         .on("keyup", onKeyUp);
 
-        this.el = $node.get(0);
+      $("html").on("click", onBlur);
 
-        this.$el = $node;
+      $autoFillDD.on("click", "li", function (e) {
 
-        this.options = options;
+        e.preventDefault();
 
-        this.setData = function (newData) {
+        $(this).addClass("selected")
+             .siblings(".selected")
+             .removeClass("selected");
 
-            data = newData;
-
-            options.data = data;
-
-            populateAutoFill($node.val(), data, $autoFillDD);
-
-            return that.$el;
-        };
-
-        this.getData = function () {
-
-            return data;
-        };
-
-        var addSelection = function () {
-
-            var selectedText = $autoFillDD.find("li.selected").text();
-
-            if(options.preAdd &&
-                    options.preAdd.apply(that, [selectedText, $node]) === false) {
-
-                return;
-            }
-
-            $node.val(selectedText);
-
-            hideAutoFill();
-
-            if(options.postAdd)
-                options.postAdd(selectedText, $node);
-        };
-
-        var onKeyUp = function (e) {
-
-            var key = e.which;
-
-            if($.inArray(key, [UP, DOWN, ENTER, ESC]) < 0){
-
-                populateAutoFill($node.val(), data, $autoFillDD);
-
-                showAutoFill();
-
-                return;
-            }
-
-            console.log("keyup");
-
-            var $li = $autoFillDD.children("li");
-
-            if($li.length === 0){
-
-                return;
-            }
-
-            var $selected_li = $li.filter(".selected");
-
-            if($selected_li.length === 0){
-
-                if(key == UP){
-
-                    $selected_li = $li.eq(0);
-                }else if(key == DOWN){
-
-                    $selected_li = $li.eq($li.length - 1);
-                }
-            }
-
-            var selected_index = $li.index($selected_li);
-
-            switch(key){
-
-                case UP:
-
-                    selected_index--;
-                    break;
-
-                case DOWN:
-
-                    selected_index++;
-                    break;
-
-                case ENTER:
-
-                    //TODO: the following should be done when opted for strictly from the
-                    //values of dropdown
-                    //Do nothing when nothing is selected
-                    if ($selected_li.length === 0) {
-
-                        return;
-                    }
-
-                    addSelection();
-
-                    if($selected_li.next().length > 0){
-
-                        $selected_li.next().addClass("selected");
-                    }else {
-
-                        $selected_li.prev().addClass("selected");
-                    }
-
-                    $selected_li.remove();
-
-                    return;
-
-                case ESC:
-
-                    hideAutoFill();
-                    return;
-            }
-
-            if(selected_index < 0){
-
-                selected_index += $li.length;
-            }else if(selected_index >= $li.length) {
-
-               selected_index %= $li.length;
-            }
-
-            $selected_li.removeClass("selected");
-
-            $li.eq(selected_index).addClass("selected");
-        };
-
-        var showAutoFill = function () {
-
-            populateAutoFill($node.val(), data, $autoFillDD);
-
-            $autoFillDD.show();
-        };
-
-        var hideAutoFill = function () {
-
-            $autoFillDD.hide();
-        };
-
-        var onBlur = function (e) {
-
-            var target = e.target;
-
-            if(target !== $autoFillDD.get(0) && target !== $node.get(0)){
-
-                hideAutoFill();
-            }
-        };
-
-        var bindEvents = function () {
-
-            $node.on("focus", showAutoFill)
-                 .on("keyup", onKeyUp);
-
-            $("html").on("click", onBlur);
-
-            $autoFillDD.on("click", "li", function(e){
-
-                e.preventDefault();
-
-                $(this).addClass("selected")
-                       .siblings(".selected")
-                       .removeClass("selected");
-
-                addSelection();
-
-                hideAutoFill();
-            });
-        };
-
-        var unbindEvents = function () {
-
-        };
-
-        bindEvents();
-
-        this.collection.push(this);
+        addSelection();
+        hideAutoFill();
+      });
     };
 
-    var collection = AutoFill.prototype.collection = [];
+    function unbindEvents () {
 
-    var getInstance = function(el) {
+    }
 
-        var instance = null;
+    bindEvents();
+    this.collection.push(this);
+  }
 
-        $.each(collection, function () {
+  var collection = AutoFill.prototype.collection = [];
 
-            if (this.el === el) {
+  function getInstance (el) {
 
-                instance = this;
-            }
-        });
+    var instance = null;
 
-        return instance;
-    };
+    $.each(collection, function () {
 
-    var optionMethodMap = {
+      if (this.el === el) {
 
-        "data": {
+        instance = this;
+      }
+    });
 
-                    "getter": "getData",
-                    "setter": "setData"
-                }
-    };
+    return instance;
+  }
 
-    var autoFill = function () {
+  var optionMethodMap = {
 
-        var $this = $(this);
+    "data": {
 
-        //IF the element doesn't exist
-        if($this.length === 0){
-
-            return $this;
+          "getter": "getData",
+          "setter": "setData"
         }
+  };
 
-        //Converting arguments to array
-        var args = Array.prototype.slice.apply(arguments, []);
+  var autoFill = function () {
 
-        var options;
+    var $this = $(this);
 
-        var existingInstance = getInstance($this.get(0));
+    //IF the element doesn't exist
+    if($this.length === 0){
 
-        if (args.length === 0) {
+      return $this;
+    }
 
-            options = args[0] = {};
-        }else if (args.length === 1 && typeof args[0] === "object") {
+    //Converting arguments to array
+    var args = Array.prototype.slice.apply(arguments, []);
 
-            options = args[0];
-        }else if (args.length > 1 && args[0] === "options") {
+    var options;
 
-            if (!existingInstance) {
+    var existingInstance = getInstance($this.get(0));
 
-                throw Error("Trying to set options before even initialization");
-            }
+    if (args.length === 0) {
 
-            var method = optionMethodMap[args[1]];
+      options = args[0] = {};
+    }else if (args.length === 1 && typeof args[0] === "object") {
 
-            if (!method) {
+      options = args[0];
+    }else if (args.length > 1 && args[0] === "options") {
 
-                throw Error("Invalid Option");
-            };
+      if (!existingInstance) {
 
-            // if args length is 2 its a getter
-            if (args.length === 2){
+        throw Error("Trying to set options before even initialization");
+      }
 
-                return existingInstance[method.getter]();
-            }
-            // if args length is 3, its a setter
-            else if (args.length === 3) {
+      var method = optionMethodMap[args[1]];
 
-                existingInstance[method.setter](args[2]);
+      if (!method) {
 
-                return existingInstance.$el;
-            }
-        }else {
+        throw Error("Invalid Option");
+      }
 
-            throw Error("Invalid Arguments");
-        }
+      // if args length is 2 its a getter
+      if (args.length === 2){
 
-        return $.each($this, function () {
+        return existingInstance[method.getter]();
+      }
+      // if args length is 3, its a setter
+      else if (args.length === 3) {
 
-                   autofillInstances.push(new AutoFill($(this), options));
-               });
-    };
+        existingInstance[method.setter](args[2]);
 
-    $.fn.autoFill = autoFill;
+        return existingInstance.$el;
+      }
+    }else {
+
+      throw Error("Invalid Arguments");
+    }
+
+    return $.each($this, function () {
+
+           autofillInstances.push(new AutoFill($(this), options));
+         });
+  };
+
+  $.fn.autoFill = autoFill;
 
 }(jQuery));
