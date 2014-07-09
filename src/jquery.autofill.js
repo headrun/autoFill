@@ -8,6 +8,8 @@
       ENTER = 13,
       ESC   = 27;
 
+  var widgetHtml = "<div class='jq-af-widget'></div>";
+
   var dropdownHtml = "<ul class='dropdown-menu af-dropdown-menu'></ul>";
 
   function getItemHtml (value) {
@@ -57,6 +59,12 @@
   var autofillInstances = [];
 
   function AutoFill ($node, options) {
+
+    var $widget = $(widgetHtml);
+
+    $widget.insertBefore($node);
+
+    $node.appendTo($widget);
 
     $node.addClass("af-input");
 
