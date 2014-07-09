@@ -1,0 +1,118 @@
+.box-sizing(@type: border-box){
+
+  box-sizing: @type;
+  -moz-box-sizing: @type;
+  -webkit-box-sizing: @type;
+  -o-box-sizing: @type;
+}
+
+.transition (@property) {
+
+  -webkit-transition: @property;
+  transition: @property;
+}
+
+.box-shadow (@properties) {
+
+  box-shadow: @properties;
+  -webkit-box-shadow: @properties;
+  -moz-box-shadow: @properties;
+  -o-box-shadpw: @properties;
+}
+
+div.jq-af-widget {
+
+  .box-sizing();
+  width: 100%;
+  position: relative;
+
+  .af-input {
+
+    .box-sizing();
+    display: block;
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+
+    .box-shadow(inset 0 1px 1px rgba(0, 0, 0, .075));
+    .transition(border-color ease-in-out .15s, box-shadow ease-in-out .15s;);
+    .box-sizing(border-box);
+
+    &:focus {
+      border-color: #66afe9;
+      outline: 0;
+      -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
+            box-shadow: inset 0 1px 1px rgba(0,0,0,.075), 0 0 8px rgba(102, 175, 233, .6);
+    }
+
+    &[disabled], &[readonly] {
+
+      cursor: not-allowed;
+      background-color: #eee;
+      opacity: 1;
+    }
+  }
+
+  .af-dropdown-menu {
+
+    .box-sizing();
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    display: none;
+    float: left;
+    min-width: 160px;
+    padding: 5px 0;
+    margin: 2px 0 0;
+    list-style: none;
+    font-size: 14px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 4px;
+    background-clip: padding-box;
+    .box-shadow(0 6px 12px rgba(0,0,0,0.175));
+
+    &> li {
+
+      .box-sizing();
+    }
+
+    &> li.selected {
+
+      &> a {
+
+        text-decoration: none;
+        color: #fff;
+        background-color: #08c;
+      }
+    }
+
+    &> li>a {
+
+      .box-sizing();
+      display: block;
+      padding: 3px 20px;
+      clear: both;
+      font-weight: 400;
+      line-height: 1.42857143;
+      color: #333;
+      white-space: nowrap;
+      text-decoration: none;
+
+      &:hover,
+      &:focus {
+        text-decoration: none;
+        color: #fff;
+        background-color: #08c;
+      }
+    }
+  }
+}

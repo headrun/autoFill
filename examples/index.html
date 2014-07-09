@@ -3,5 +3,26 @@
   <head lang="en">
 
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <link rel="stylesheet" href="../src/jquery.autofill.css"/>
   </head>
+  <body>
+
+    <p style="margin-bottom: 10px">Search For your favorite color:</p>
+    <input id="af-input" type="text" placeholders="Search for your favorite color"/>
+    <script type="text/javascript" src="../lib/jquery-2.1.1.min.js"></script>
+    <script type="text/javascript" src="../src/jquery.autofill.js"></script>
+    <script>
+      //On Document Load
+      $(function (){
+        "use strict";
+
+        var colors = ["Red", "Green", "Blue", "Cyan", "Magenta", "Yellow", "Black"];
+
+        $("#af-input").autoFill({
+
+          data: colors
+        });
+      });
+    </script>
+  </body>
 </html>
